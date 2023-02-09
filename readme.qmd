@@ -1,0 +1,68 @@
+---
+title: "Parquet Read Memory Usage"
+format: gfm
+execute:
+  echo: false
+---
+
+
+```{r}
+#| output: false
+library(readr)
+library(ggplot2)
+library(dplyr)
+share_data <- read_csv("share_results.csv", col_names=c("name", "time"))
+retrieve_data <- read_csv("retrieve_results.csv", col_names=c("name", "time"))
+```
+
+
+```{r}
+ggplot(share_data, aes(x = name, y = time)) +
+    geom_boxplot() + 
+    scale_y_continuous(min = 0) + 
+    labs(
+        title="Time to export 10 million rows of Arrow data (about 1GB)",
+        x = "Transport",
+        y = "Time (seconds)"
+    )
+```
+
+
+```{r}
+ggplot(retrieve_data, aes(x = name, y = time)) +
+    geom_boxplot() + 
+    scale_y_continuous(min = 0) + 
+    labs(
+        title="Time to retrieve 10 million rows of Arrow data (about 1GB)",
+        x = "Transport",
+        y = "Time (seconds)"
+    )
+```
+
+
+
+## How to run
+
+First start the plasma server
+
+```shell
+plasma_store -m 1000000000 -s /tmp/plasma
+```
+
+Then, start the flight server
+
+```shell
+python flight_server.pys
+```
+
+Then run the share benchmarks
+
+```
+
+```
+
+Finally, run the retrieve benchmarks:
+
+```
+
+```

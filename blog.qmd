@@ -1,0 +1,37 @@
+
+
+# Replacing Plasma
+
+The Plasma subproject is scheduled to be dropped in the next release of Apache
+Arrow libraries (12.0.0). The subproject was no longer maintained, and in the
+meantime newer technologies have been created that bring different possibilties 
+for sharing data.
+
+Plasma was added to the Apache Arrow project back in 2017. In 2019, Python
+released version 3.8, which introduced Shared Memory support in the multiprocessing
+module. Also in 2019, we introduced Flight, a protocol for exchanging Arrow data
+between processes. And finally in 2020 we introduced the C Data interface, a 
+protocol for exchanging Arrow data between different implementations and
+languages within the same process.
+
+## IPC + Shared Memory: Share arrays between Python processes
+
+A simple way to share data between Python processes is putting Arrow IPC buffers
+into shared memory using `multiprocessing.shared_memory`.
+
+
+
+This example is based on the example of sharing NumPy arrays from the standard
+library docs: https://docs.python.org/3/library/multiprocessing.shared_memory.html#multiprocessing.shared_memory.SharedMemory
+
+
+## Local flight server: share arrays between arbitrary languages
+
+Flight isn't just for communicating between different hosts; it also supports
+transports that are optimized for communicating between processes on the same
+host.
+
+
+## C Data Interface: shared arrays across language barriers in the same process 
+
+
