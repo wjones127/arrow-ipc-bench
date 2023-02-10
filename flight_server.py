@@ -1,9 +1,8 @@
 # Copied from https://github.com/apache/arrow/blob/master/python/examples/flight/server.py
-# + modified to use grpc+unix and drop TLS
+# + modified to use grpc+unix
 
 """An example Flight Python server."""
 
-import argparse
 import ast
 import threading
 import time
@@ -22,6 +21,7 @@ class FlightServer(pyarrow.flight.FlightServerBase):
         self.flights = {}
         self.host = host
         self.tls_certificates = tls_certificates
+        self.location = location
 
     @classmethod
     def descriptor_to_key(self, descriptor):
@@ -29,12 +29,7 @@ class FlightServer(pyarrow.flight.FlightServerBase):
                 tuple(descriptor.path or tuple()))
 
     def _make_flight_info(self, key, descriptor, table):
-        if self.tls_certificates:
-            location = pyarrow.flight.Location.for_grpc_tls(
-                self.host, self.port)
-        else:
-            location = pyarrow.flight.Location.for_grpc_tcp(
-                self.host, self.port)
+        location = pyarrow.flight.Location.for_grpc_unix(self.location)
         endpoints = [pyarrow.flight.FlightEndpoint(repr(key), [location]), ]
 
         mock_sink = pyarrow.MockOutputStream()
@@ -104,20 +99,9 @@ class FlightServer(pyarrow.flight.FlightServerBase):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--host", type=str, default="localhost",
-                        help="Address or hostname to listen on")
-    parser.add_argument("--port", type=int, default=5005,
-                        help="Port number to listen on")
-
-    args = parser.parse_args()
-    # tls_certificates = []
-    # scheme = "grpc+unix"
-
-    # location = "{}://{}:{}".format(scheme, args.host, args.port)
     location = "grpc+unix:///tmp/test.sock"
 
-    server = FlightServer(args.host, location)
+    server = FlightServer("localhost", location)
     print("Serving on", location)
     server.serve()
 

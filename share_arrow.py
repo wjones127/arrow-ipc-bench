@@ -9,7 +9,6 @@ import numpy as np
 
 # TODO: show IPC file for comparison
 # TODO: show Ray actor for comparison
-# TODO: see if we can use Flight unix socket
 
 def calculate_ipc_size(table: pa.Table) -> int:
     sink = pa.MockOutputStream()
@@ -77,10 +76,10 @@ def timer(f: TextIOWrapper, name: str, size: int):
 
 if __name__ == "__main__":
     n_iters = 10
-    n_rows = 10_000_000
+    n_rows = 100_000_000
     table = get_table(n_rows)
 
-    f = open("shared_results.csv", mode="w")
+    f = open("share_results.csv", mode="w")
 
     # Warm up the memory pool, so all runs are comparable
     buf = write_ipc_buffer(table)
@@ -104,15 +103,20 @@ if __name__ == "__main__":
             export_to_shared_memory(shared_memory_name, table)
 
     # Finally, flight
-    location = "grpc+unix:///tmp/input.sock"
+    location = "grpc+unix:///tmp/test.sock"
     flight_client = pa.flight.connect(location)
     for i in range(n_iters):
         # More graceful way to collect all the results?
         list(flight_client.do_action("clear"))
-        next(flight_client.list_flights())
         with timer(f, "flight_export", buffer_size):
             export_to_flight(flight_client, table)
 
+    # We need to disconnect, since only one client can connection to a Flight
+    # server at a time when using the 
+    # flight_client.close()
+    # del flight_client
+
+    f.close()
     print("ready!")
 
     while True:

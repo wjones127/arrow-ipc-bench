@@ -1,9 +1,12 @@
 ---
-title: "Parquet Read Memory Usage"
+title: "Sharing Arrow data between processes"
 format: gfm
 execute:
   echo: false
 ---
+
+These are some tests to compare different methods of sharing an Arrow table 
+between different processes.
 
 
 ```{r}
@@ -11,17 +14,54 @@ execute:
 library(readr)
 library(ggplot2)
 library(dplyr)
-share_data <- read_csv("share_results.csv", col_names=c("name", "time"))
+share_data <- read_csv("share_results.csv", col_names=c("name", "time", "size_bytes")) %>%
+    mutate(gbps = (size_bytes / 1024 / 1024 / 1024) / time)
 retrieve_data <- read_csv("retrieve_results.csv", col_names=c("name", "time"))
 ```
 
 
-```{r}
+```{r share-time}
 ggplot(share_data, aes(x = name, y = time)) +
     geom_boxplot() + 
     scale_y_continuous(min = 0) + 
     labs(
-        title="Time to export 10 million rows of Arrow data (about 1GB)",
+        title="Time to export 100 million rows of Arrow data (about 1.5 GB)",
+        x = "Transport",
+        y = "Time (seconds)"
+    )
+```
+
+
+```{r share-throughput}
+ggplot(share_data, aes(x = name, y = gbps)) +
+    geom_boxplot() + 
+    scale_y_continuous(min = 0) + 
+    labs(
+        title="Throughput",
+        x = "Transport",
+        y = "GB per second"
+    )
+```
+
+
+```{r share-table}
+share_data %>%
+    group_by(name) %>%
+    summarise(
+        avg_time_sec = mean(time),
+        min_time_sec = min(time),
+        avg_gbps = mean(gbps),
+        max_gbps = max(gbps)
+    )
+```
+
+
+```{r retrieve-time}
+ggplot(retrieve_data, aes(x = name, y = time)) +
+    geom_boxplot() + 
+    scale_y_continuous(min = 0) + 
+    labs(
+        title="Time to retrieve 100 million rows of Arrow data (about 1.5 GB)",
         x = "Transport",
         y = "Time (seconds)"
     )
@@ -29,13 +69,11 @@ ggplot(share_data, aes(x = name, y = time)) +
 
 
 ```{r}
-ggplot(retrieve_data, aes(x = name, y = time)) +
-    geom_boxplot() + 
-    scale_y_continuous(min = 0) + 
-    labs(
-        title="Time to retrieve 10 million rows of Arrow data (about 1GB)",
-        x = "Transport",
-        y = "Time (seconds)"
+retrieve_data %>%
+    group_by(name) %>%
+    summarise(
+        avg_time_sec = mean(time),
+        min_time_sec = min(time),
     )
 ```
 
@@ -52,7 +90,7 @@ plasma_store -m 1000000000 -s /tmp/plasma
 Then, start the flight server
 
 ```shell
-python flight_server.pys
+python flight_server.py
 ```
 
 Then run the share benchmarks
