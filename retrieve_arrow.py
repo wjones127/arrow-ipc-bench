@@ -10,8 +10,11 @@ import time
 
 def retrieve_sharedmemory(name: str) -> pa.Table:
     table_shm = shared_memory.SharedMemory(name=name)
-    pa.ipc.open_stream(table_shm.buf).read_all()
-    table_shm.close()
+    table = pa.ipc.open_stream(table_shm.buf).read_all()
+    for column in table:
+        pc.sum(column)
+    # del table
+    # table_shm.close()
 
 def retrieve_plasma(client, object_id: bytes) -> pa.Table:
     [buffer] = client.get_buffers([object_id])
@@ -46,13 +49,19 @@ if __name__ == "__main__":
         with timer(f, "plasma_import"):
             retrieve_plasma(plasma_client, object_id)
     
-    # shared_memory_name = "table"
-    # for i in range(n_iters):
-    #     with timer(f, "sharedmemory_import"):
-    #         retrieve_sharedmemory(shared_memory_name)
+    shared_memory_name = "table"
+    for i in range(n_iters):
+        with timer(f, "sharedmemory_import"):
+            retrieve_sharedmemory(shared_memory_name)
     
     location = "grpc+unix:///tmp/test.sock"
     flight_client = pa.flight.connect(location)
     for i in range(n_iters):
-        with timer(f, "flight_export"):
+        with timer(f, "flight_unix_import"):
+            retrieve_flight(flight_client)
+    
+    location = "grpc+tcp://localhost:3000"
+    flight_client = pa.flight.connect(location)
+    for i in range(n_iters):
+        with timer(f, "flight_tcp_import"):
             retrieve_flight(flight_client)
