@@ -63,7 +63,9 @@ class FlightServer(pyarrow.flight.FlightServerBase):
     def do_put(self, context, descriptor, reader, writer):
         key = FlightServer.descriptor_to_key(descriptor)
         print(key)
-        self.flights[key] = reader.read_all()
+        table = reader.read_all()
+        chunk_size = 2**16
+        self.flights[key] = pyarrow.Table.from_batches(table.to_batches(max_chunksize=chunk_size))
         print(self.flights[key])
 
     def do_get(self, context, ticket):

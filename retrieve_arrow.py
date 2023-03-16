@@ -1,6 +1,7 @@
 # In new Python
 from io import TextIOWrapper
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.flight
 import pyarrow.plasma as plasma
 from multiprocessing import shared_memory
@@ -15,7 +16,9 @@ def retrieve_sharedmemory(name: str) -> pa.Table:
 def retrieve_plasma(client, object_id: bytes) -> pa.Table:
     [buffer] = client.get_buffers([object_id])
     reader = pa.BufferReader(buffer)
-    pa.ipc.open_stream(reader).read_all()
+    table = pa.ipc.open_stream(reader).read_all()
+    for column in table:
+        pc.sum(column)
 
 def retrieve_flight(client) -> pa.Table:
     descriptor = pa.flight.FlightDescriptor.for_path("table")
@@ -41,10 +44,10 @@ if __name__ == "__main__":
         with timer(f, "plasma_import"):
             retrieve_plasma(plasma_client, object_id)
     
-    shared_memory_name = "table"
-    for i in range(n_iters):
-        with timer(f, "sharedmemory_import"):
-            retrieve_sharedmemory(shared_memory_name)
+    # shared_memory_name = "table"
+    # for i in range(n_iters):
+    #     with timer(f, "sharedmemory_import"):
+    #         retrieve_sharedmemory(shared_memory_name)
     
     location = "grpc+unix:///tmp/test.sock"
     flight_client = pa.flight.connect(location)
