@@ -24,7 +24,9 @@ def retrieve_flight(client) -> pa.Table:
     descriptor = pa.flight.FlightDescriptor.for_path("table")
     flight_into = client.get_flight_info(descriptor)
     reader = client.do_get(flight_into.endpoints[0].ticket)
-    reader.read_all()
+    for chunk in reader:
+        for col in chunk.data.columns:
+            pc.sum(col)
 
 @contextmanager
 def timer(f: TextIOWrapper, name: str):
