@@ -87,16 +87,20 @@ First start the plasma server
 plasma_store -m 1000000000 -s /tmp/plasma
 ```
 
-Then, start the flight server
+Then, start the flight servers
 
-```shell
+``` shell
 python flight_server.py
 ```
 
-Then run the share benchmarks
-
+```shell
+python flight_server.py --use-tcp
 ```
 
+Then run the share benchmarks:
+
+```shell
+python share_arrow.py
 ```
 
 Finally, run the retrieve benchmarks:

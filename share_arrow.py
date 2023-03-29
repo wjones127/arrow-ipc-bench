@@ -62,7 +62,7 @@ def clear_plasma(client, object_id: bytes):
 def export_to_flight(client, table: pa.Table):
     descriptor = pa.flight.FlightDescriptor.for_path("table")
     writer, _ = client.do_put(descriptor, table.schema)
-    writer.write_table(table)
+    writer.write_table(table, max_chunksize=64_000)
     writer.close()
     
 
@@ -102,13 +102,22 @@ if __name__ == "__main__":
         with timer(f, "sharedmemory_export", buffer_size):
             export_to_shared_memory(shared_memory_name, table)
 
-    # Finally, flight
+    # Flight over unix domain socket
     location = "grpc+unix:///tmp/test.sock"
     flight_client = pa.flight.connect(location)
     for i in range(n_iters):
         # More graceful way to collect all the results?
         list(flight_client.do_action("clear"))
-        with timer(f, "flight_export", buffer_size):
+        with timer(f, "flight_unix_export", buffer_size):
+            export_to_flight(flight_client, table)
+
+    # Flight over TCP
+    location = "grpc+tcp://localhost:3000"
+    flight_client = pa.flight.connect(location)
+    for i in range(n_iters):
+        # More graceful way to collect all the results?
+        list(flight_client.do_action("clear"))
+        with timer(f, "flight_tcp_export", buffer_size):
             export_to_flight(flight_client, table)
 
     # We need to disconnect, since only one client can connection to a Flight

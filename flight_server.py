@@ -3,6 +3,7 @@
 
 """An example Flight Python server."""
 
+import argparse
 import ast
 import threading
 import time
@@ -64,13 +65,17 @@ class FlightServer(pyarrow.flight.FlightServerBase):
         key = FlightServer.descriptor_to_key(descriptor)
         print(key)
         self.flights[key] = reader.read_all()
-        print(self.flights[key])
+        
+        # table = reader.read_all()
+        # chunk_size = 2**16
+        # self.flights[key] = pyarrow.Table.from_batches(table.to_batches(max_chunksize=chunk_size))
+        # print(self.flights[key])
 
     def do_get(self, context, ticket):
         key = ast.literal_eval(ticket.ticket.decode())
         if key not in self.flights:
             return None
-        return pyarrow.flight.RecordBatchStream(self.flights[key])
+        return pyarrow.flight.RecordBatchStream(self.flights[key].to_reader(64_000))
 
     def list_actions(self, context):
         return [
@@ -99,7 +104,14 @@ class FlightServer(pyarrow.flight.FlightServerBase):
 
 
 def main():
-    location = "grpc+unix:///tmp/test.sock"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--use-tcp", type=bool, default=False)
+    args = parser.parse_args()
+
+    if args.use_tcp:
+        location = "grpc+tcp://localhost:3000"
+    else:
+        location = "grpc+unix:///tmp/test.sock"
 
     server = FlightServer("localhost", location)
     print("Serving on", location)
